@@ -15,7 +15,7 @@ $this->import('
 
 ');
 ?>
-<article class="panel__row panel-entity-models-card" v-if="showModel">
+<article class="panel__row panel-entity-models-card col-6" v-if="showModel">
     <header class="panel-entity-models-card__header">
         <div class="left">
             <slot name="picture" :entity="entity">
@@ -38,15 +38,7 @@ $this->import('
         <div class="right">
             <div class="panel-entity-models-card__header-actions">
                 <slot name="header-actions" :entity="entity">
-                    <li v-if="getTypeModel == typeModels.MODEL_OFFICIAL" class="tag-official mc-tag-list__tag">    
-                        {{ typeModels.MODEL_OFFICIAL }}
-                    </li>
-                    <li v-if="getTypeModel == typeModels.MODEL_PUBLIC" class="tag-public mc-tag-list__tag">    
-                        {{ typeModels.MODEL_PUBLIC }}
-                    </li>
-                    <li v-if="getTypeModel == typeModels.MODEL_PRIVATE" class="tag-private mc-tag-list__tag">    
-                        {{ typeModels.MODEL_PRIVATE }}
-                    </li>
+                    {{ entity.isModelPublic == 0 ? 'MEU MODELO' : 'MODELO PÚBLICO' }}
                 </slot>
             </div>
         </div>
@@ -69,7 +61,16 @@ $this->import('
                     <mc-icon name="agent" class="icon-model"></mc-icon>
                     <strong><?=i::__('Tipo de agente: ')?></strong> {{ model.tipoAgente }}
                     <br><br>
-                    
+                    <?php if($app->user->is('admin')): ?>
+                        <div v-if="entity.currentUserPermissions?.modify">
+                            <label class="switch" >
+                                <input type="checkbox" v-model="isModelPublic" />
+                                <span class="slider round"></span>
+                            </label>
+                            <span class="switch-text"><?= i::__("Modelo público") ?></span>
+                        </div>
+                        <br><br>
+                    <?php endif; ?>
                 </span>
             </div>
         </div>
@@ -92,7 +93,7 @@ $this->import('
                     </slot>
                     <slot name="entity-actions-right" >
                         <div v-if="showModel && entity.status != -2 && entity.__objectType == 'opportunity' && entity.isModel == 1">
-                            <opportunity-create-based-model :entitydefault="entity" classes="col-12"></opportunity-create-based-model>
+                            <opportunity-create-based-model :entity="entity" classes="col-12"></opportunity-create-based-model>
                         </div>
                     </slot>
                 </div>

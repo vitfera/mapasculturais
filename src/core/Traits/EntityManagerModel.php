@@ -20,7 +20,6 @@ trait EntityManagerModel {
         $this->generatePhases();
         $this->generateMetadata();
         $this->generateRegistrationFieldsAndFiles();
-        $this->generateSealsRelations();
 
         $this->entityOpportunityModel->save(true);
         
@@ -43,7 +42,7 @@ trait EntityManagerModel {
         $this->generateEvaluationMethods();
         $this->generatePhases();
         $this->generateMetadata(0, 0);
-        $this->generateRegistrationFieldsAndFiles($this->entityOpportunity, $this->entityOpportunityModel);
+        $this->generateRegistrationFieldsAndFiles();
 
         $this->entityOpportunityModel->save(true);
        
@@ -59,25 +58,17 @@ trait EntityManagerModel {
         
         $opportunities = $app->em->createQuery("
             SELECT 
-                o.id
+                op.id
             FROM
-                MapasCulturais\Entities\OpportunityMeta om
-                JOIN MapasCulturais\Entities\Opportunity o WITH om.owner=o
-            WHERE om.key = 'isModel' AND om.value = '1'
+                MapasCulturais\Entities\Opportunity op
         ");
 
         foreach ($opportunities->getResult() as $opportunity) {
             $opp = $app->repo('Opportunity')->find($opportunity['id']);
-            $phases = $opp->phases;
+            if ($opp->isModel) {
+                $phases = $opp->phases;
 
                 $lastPhase = array_pop($phases);
-
-                $modelIsOfficial = false;
-                foreach ($opp->getSealRelations() as $sealRelation) {
-                    if ( in_array($sealRelation->seal->id, $app->config['app.verifiedSealsIds'])) {
-                        $modelIsOfficial = true;
-                    }
-                }
                 
                 $days = !is_null($opp->registrationFrom) && !is_null($lastPhase->publishTimestamp) ? $lastPhase->publishTimestamp->diff($opp->registrationFrom)->days . " Dia(s)" : 'N/A';
                 $tipoAgente = $opp->registrationProponentTypes ? implode(', ', $opp->registrationProponentTypes) : 'N/A';
@@ -86,21 +77,9 @@ trait EntityManagerModel {
                     'numeroFases' => count($opp->phases),
                     'descricao' => $opp->shortDescription,
                     'tempoEstimado' => $days,
-                    'tipoAgente'   =>  $tipoAgente,
-                    'modelIsOfficial' => $modelIsOfficial
+                    'tipoAgente'   =>  $tipoAgente  
                 ];
             }
-            
-            $days = !is_null($opp->registrationFrom) && !is_null($lastPhase->publishTimestamp) ? $lastPhase->publishTimestamp->diff($opp->registrationFrom)->days . " Dia(s)" : 'N/A';
-            $tipoAgente = $opp->registrationProponentTypes ? implode(', ', $opp->registrationProponentTypes) : 'N/A';
-            $dataModels[] = [
-                'id' => $opp->id,
-                'numeroFases' => count($opp->phases),
-                'descricao' => $opp->shortDescription,
-                'tempoEstimado' => $days,
-                'tipoAgente'   =>  $tipoAgente,
-                'modelIsOfficial' => $modelIsOfficial
-            ];
         }
         
         $this->json($dataModels);
@@ -135,10 +114,6 @@ trait EntityManagerModel {
         $this->entityOpportunityModel->name = $name;
         $this->entityOpportunityModel->status = -1;
         $this->entityOpportunityModel->shortDescription = $description;
-
-        $now = new \DateTime('now');
-        $this->entityOpportunityModel->createTimestamp = $now;
-
         $app->em->persist($this->entityOpportunityModel);
         $app->em->flush();
 
@@ -164,40 +139,18 @@ trait EntityManagerModel {
         $this->entityOpportunityModel->name = $name;
         $this->entityOpportunityModel->status = Entity::STATUS_DRAFT;
         $this->entityOpportunityModel->owner = $app->user->profile;
-
-        $now = new \DateTime('now');
-        $this->entityOpportunityModel->createTimestamp = $now;
-
         $app->em->persist($this->entityOpportunityModel);
         $app->em->flush();
+
+        
 
         // necessário adicionar as categorias, proponetes e ranges após salvar devido a trigger public.fn_propagate_opportunity_insert
         $this->entityOpportunityModel->registrationCategories = $this->entityOpportunity->registrationCategories;
         $this->entityOpportunityModel->registrationProponentTypes = $this->entityOpportunity->registrationProponentTypes;
         $this->entityOpportunityModel->registrationRanges = $this->entityOpportunity->registrationRanges;
-        
-        $this->changeObjectType($this->entityOpportunityModel->id);
-        
         $this->entityOpportunityModel->save(true);
 
         return $this->entityOpportunityModel;
-    }
-
-    private function changeObjectType($id)
-    {
-        $app = App::i();
-        $postData = $this->postData;
-
-        if (isset($postData['objectType']) && isset($postData['ownerEntity'])) {
-            $ownerEntity = $app->repo($postData['objectType'])->find($postData['ownerEntity']);
-            $app->em->beginTransaction();            
-            $app->em->getConnection()->update('opportunity', [
-                    'object_type' => $ownerEntity->getClassName(), 
-                    'object_id' => $ownerEntity->id
-                ], ['id' => $id]);
-
-            $app->em->commit();
-        }
     }
 
     private function generateEvaluationMethods() : void
@@ -224,8 +177,6 @@ trait EntityManagerModel {
     private function generatePhases() : void
     {
         $app = App::i();
-        $postData = $this->postData;
-
         $phases = $app->repo('Opportunity')->findBy([
             'parent' => $this->entityOpportunity
         ]);
@@ -236,8 +187,6 @@ trait EntityManagerModel {
                 $newPhase->setParent($this->entityOpportunityModel);
                 $newPhase->owner = $app->user->profile;
 
-                $this->changeObjectType($newPhase->id);
-
                 foreach ($phase->getMetadata() as $metadataKey => $metadataValue) {
                     if (!is_null($metadataValue) && $metadataValue != '') {
                         $newPhase->setMetadata($metadataKey, $metadataValue);
@@ -246,8 +195,6 @@ trait EntityManagerModel {
                 }
 
                 $newPhase->save(true);
-
-                $this->changeObjectType($newPhase->id);
 
                 $evaluationMethodConfigurations = $app->repo('EvaluationMethodConfiguration')->findBy([
                     'opportunity' => $phase
@@ -269,7 +216,6 @@ trait EntityManagerModel {
 
             if ($phase->getMetadata('isLastPhase')) {
                 $publishDate = $phase->publishTimestamp;
-                $subsite = $phase->subsite;
             }
         }
 
@@ -281,10 +227,7 @@ trait EntityManagerModel {
             foreach ($phases as $phase) {
                 if ($phase->getMetadata('isLastPhase')) {
                     $phase->setPublishTimestamp($publishDate);
-                    $phase->subsite = $subsite;
                     $phase->save(true);
-
-                    $this->changeObjectType($phase->id);
                 }
             }
         }   
@@ -293,21 +236,10 @@ trait EntityManagerModel {
 
     private function generateMetadata($isModel = 1, $isModelPublic = 0) : void
     {
-        $app = App::i();
-        $em = $app->em;
-        $conn = $em->getConnection();
-
-        $sql = "
-            SELECT 
-                om.*
-            FROM
-                opportunity_meta om
-            WHERE om.object_id = {$this->entityOpportunity->id}
-        ";
-        $stmt = $conn->query($sql);
-
-        while (($row = $stmt->fetchAssociative()) !== false) {
-            $this->entityOpportunityModel->setMetadata($row['key'], $row['value']);
+        foreach ($this->entityOpportunity->getMetadata() as $metadataKey => $metadataValue) {
+            if (!is_null($metadataValue) && $metadataValue != '') {
+                $this->entityOpportunityModel->setMetadata($metadataKey, $metadataValue);
+            }
         }
 
         $this->entityOpportunityModel->setMetadata('isModel', $isModel);
@@ -316,25 +248,19 @@ trait EntityManagerModel {
         $this->entityOpportunityModel->saveTerms();
     }
 
-    private function generateRegistrationFieldsAndFiles($opportunityCurrent, $opportunityNew) : void
+    private function generateRegistrationFieldsAndFiles() : void
     {
-        foreach ($opportunityCurrent->getRegistrationFieldConfigurations() as $registrationFieldConfiguration) {
+        foreach ($this->entityOpportunity->getRegistrationFieldConfigurations() as $registrationFieldConfiguration) {
             $fieldConfiguration = clone $registrationFieldConfiguration;
-            $fieldConfiguration->setOwnerId($opportunityNew->id);
+            $fieldConfiguration->setOwnerId($this->entityOpportunityModel->id);
             $fieldConfiguration->save(true);
         }
 
-        foreach ($opportunityCurrent->getRegistrationFileConfigurations() as $registrationFileConfiguration) {
+        foreach ($this->entityOpportunity->getRegistrationFileConfigurations() as $registrationFileConfiguration) {
             $fileConfiguration = clone $registrationFileConfiguration;
-            $fileConfiguration->setOwnerId($opportunityNew->id);
+            $fileConfiguration->setOwnerId($this->entityOpportunityModel->id);
             $fileConfiguration->save(true);
         }
-    }
 
-    private function generateSealsRelations() : void
-    {
-        foreach ($this->entityOpportunity->getSealRelations() as $sealRelation) {
-            $this->entityOpportunityModel->createSealRelation($sealRelation->seal, true, true);
-        }
     }
 }

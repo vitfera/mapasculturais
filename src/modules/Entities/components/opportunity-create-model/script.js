@@ -35,7 +35,7 @@ app.component('opportunity-create-model', {
 
             if (error = this.validade(objt)) {
                 let mess = "";
-                mess = this.text('Todos os campos são obrigatórios.');
+                mess = this.text('Todos os campos são obrigatorio');
                 this.messages.error(mess);
                 return;
             }

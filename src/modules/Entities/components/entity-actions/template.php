@@ -9,6 +9,8 @@ use MapasCulturais\i;
 $this->import('
     mc-confirm-button
     mc-loading
+    opportunity-create-model
+    opportunity-create-based-model
 ');
 ?>
 <div v-if="!empty" class="entity-actions">
