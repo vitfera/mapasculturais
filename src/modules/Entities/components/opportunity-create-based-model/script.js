@@ -18,6 +18,8 @@ app.component('opportunity-create-based-model', {
             name: ''
         }
 
+        // console.log(this.entitydefault);
+
         return {
             fields: [],
             entity: null,
@@ -34,6 +36,7 @@ app.component('opportunity-create-based-model', {
         modalTitle() {
             if (!this.entity?.id) {
                 return __('criarOportunidade', 'opportunity-create-based-model');
+                console.log(this.entity.id);
             }
             if(this.entity.status==0){
                 return __('oportunidadeCriada', 'opportunity-create-based-model');
@@ -99,7 +102,7 @@ app.component('opportunity-create-based-model', {
             }
 
             await api.POST(`/opportunity/generateopportunity/${objt.entityId}`, objt).then(response => response.json().then(dataReturn => {
-                this.messages.success(this.text('Aguarde. Estamos gerando a oportunidade baseada no modelo.'), 6000);
+                this.messages.success(this.text('Aguarde, estamos gerando a oportunidade baseada no modelo.'), 6000);
 
                 this.sendSuccess = true;
 
