@@ -236,6 +236,8 @@ trait EntityManagerModel {
                 $newPhase->setParent($this->entityOpportunityModel);
                 $newPhase->owner = $app->user->profile;
 
+                $this->changeObjectType($newPhase->id);
+
                 foreach ($phase->getMetadata() as $metadataKey => $metadataValue) {
                     if (!is_null($metadataValue) && $metadataValue != '') {
                         $newPhase->setMetadata($metadataKey, $metadataValue);
