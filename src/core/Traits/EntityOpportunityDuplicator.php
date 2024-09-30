@@ -204,7 +204,7 @@ trait EntityOpportunityDuplicator {
         foreach ($files as $file) {
             if (is_null($file['parent_id'])) {
                 $parentId = null;
-            } else if (isset($futureParentId)) {
+            } else if (isset($futureParentId) && !is_null($file['parent_id'])) {
                 $parentId = $futureParentId;
             } else {
                 throw new Exception('File parent_id is null or not exists');
