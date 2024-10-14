@@ -20,6 +20,7 @@ trait EntityManagerModel {
         $this->generatePhases();
         $this->generateMetadata();
         $this->generateRegistrationFieldsAndFiles($this->entityOpportunity, $this->entityOpportunityModel);
+        $this->generateRegistrationFieldsAndFiles($this->entityOpportunity, $this->entityOpportunityModel);
         $this->generateSealsRelations();
 
         $this->entityOpportunityModel->save(true);
@@ -230,12 +231,6 @@ trait EntityManagerModel {
                         $newPhase->save(true);
                     }
                 }
-
-                $this->generateRegistrationFieldsAndFiles($phase, $newPhase);
-
-                $now = new \DateTime('now');
-                $newPhase->createTimestamp = $now;
-                $newPhase->subsite = $phase->subsite;
 
                 $newPhase->save(true);
 
