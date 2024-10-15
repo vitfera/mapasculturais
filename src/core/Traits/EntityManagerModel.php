@@ -235,6 +235,7 @@ trait EntityManagerModel {
 
                 $now = new \DateTime('now');
                 $newPhase->createTimestamp = $now;
+                $newPhase->subsite = $phase->subsite;
 
                 $now = new \DateTime('now');
                 $newPhase->createTimestamp = $now;
