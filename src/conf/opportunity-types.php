@@ -246,6 +246,18 @@ return array(
             'label' => \MapasCulturais\i::__('Total de vagas'),
             // 'description' => \MapasCulturais\i::__("Quantidades de vagas que esse edital irá disponibilizar."),
         ),
+        'requestAgentAvatar' => array(
+            'label' => \MapasCulturais\i::__('Solicitar avatar'),
+            'type' => 'radio',
+            'default' => '0',
+            'options' => (object) array(
+                '0' => \MapasCulturais\i::__('Desabilitado'),
+                '1' => \MapasCulturais\i::__('Habilitado'),
+            ),
+            'unserialize' => function($value) {
+               return ($value == 0 || $value == "" || $value == "0") ? false : true;
+            }
+        ),
         'isModel' => array(
             'type' => 'integer',
             'label' => \MapasCulturais\i::__('É modelo?'),
@@ -255,7 +267,6 @@ return array(
             'type' => 'integer',
             'label' => \MapasCulturais\i::__('É modelo público?'),
         ),
-        
     ),
     'items' => $items,
     
