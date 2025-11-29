@@ -3111,6 +3111,27 @@ $$
                      USING registration_step rs
                      WHERE rs.id = rfc.step_id
                        AND rs.opportunity_id != rfc.opportunity_id;");
+    },
+
+    "Cria tabela event_favorite para sistema de favoritar eventos" => function() {
+        $app = App::i();
+        $em = $app->em;
+        $conn = $em->getConnection();
+
+        $conn->executeQuery("
+            CREATE TABLE IF NOT EXISTS event_favorite (
+                id SERIAL PRIMARY KEY,
+                agent_id INTEGER NOT NULL,
+                event_id INTEGER NOT NULL,
+                create_timestamp TIMESTAMP DEFAULT NOW(),
+                CONSTRAINT fk_event_favorite_agent FOREIGN KEY (agent_id) REFERENCES agent(id) ON DELETE CASCADE,
+                CONSTRAINT fk_event_favorite_event FOREIGN KEY (event_id) REFERENCES event(id) ON DELETE CASCADE,
+                CONSTRAINT unique_event_favorite UNIQUE (agent_id, event_id)
+            );
+            
+            CREATE INDEX IF NOT EXISTS idx_event_favorite_agent ON event_favorite(agent_id);
+            CREATE INDEX IF NOT EXISTS idx_event_favorite_event ON event_favorite(event_id);
+        ");
     }
     
 ] + $updates ;   

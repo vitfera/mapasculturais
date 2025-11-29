@@ -19,6 +19,7 @@ $this->import('
     entity-seals
     entity-social-media
     entity-terms
+    event-favorite-button
     event-info
     event-age-rating 
     mc-breadcrumb
@@ -67,6 +68,9 @@ $this->breadcrumb = [
                     </main>
                     <aside>
                         <div class="grid-12">
+                            <div class="col-12" style="margin-bottom: 1rem;">
+                                <event-favorite-button :event="entity" :show-count="true"></event-favorite-button>
+                            </div>
                             <entity-owner :entity="entity" classes="col-12" title="<?php i::esc_attr_e('Publicado por'); ?>"></entity-owner>
                             <entity-terms :entity="entity" hide-required classes="col-12" taxonomy="linguagem" title="<?php i::esc_attr_e('Linguagem cultural');?>"></entity-terms>
                             <entity-social-media :entity="entity" classes="col-12"></entity-social-media>

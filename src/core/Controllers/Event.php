@@ -838,4 +838,118 @@ class Event extends EntityController {
         $this->apiResponse($this->apiQueryByLocation($this->getData));
 
     }
+
+    /**
+     * Alterna o estado de favorito de um evento
+     * @return void
+     */
+    public function POST_toggleFavorite() {
+        $this->requireAuthentication();
+        
+        $app = App::i();
+        $user = $app->user;
+        
+        $data = $this->postData;
+        
+        if (!isset($data['eventId'])) {
+            $this->errorJson('eventId é obrigatório');
+            return;
+        }
+        
+        $event = $app->repo('Event')->find($data['eventId']);
+        
+        if (!$event) {
+            $this->errorJson('Evento não encontrado', 404);
+            return;
+        }
+        
+        // Verifica se já existe um favorito
+        $favorite = $app->repo('EventFavorite')->findOneBy([
+            'agent' => $user->profile,
+            'event' => $event
+        ]);
+        
+        if ($favorite) {
+            // Remove o favorito
+            $favorite->delete(true);
+            $this->json([
+                'favorited' => false,
+                'count' => $event->getFavoritesCount()
+            ]);
+        } else {
+            // Cria um novo favorito
+            $newFavorite = new \MapasCulturais\Entities\EventFavorite;
+            $newFavorite->agent = $user->profile;
+            $newFavorite->event = $event;
+            
+            $newFavorite->save(true);
+            
+            $this->json([
+                'favorited' => true,
+                'count' => $event->getFavoritesCount()
+            ]);
+        }
+    }
+
+    /**
+     * Remove um evento dos favoritos
+     * @return void
+     */
+    public function DELETE_removeFavorite($data = null) {
+        $this->requireAuthentication();
+        
+        $app = App::i();
+        $user = $app->user;
+        
+        if (!isset($data['eventId'])) {
+            $this->errorJson('eventId é obrigatório');
+            return;
+        }
+        
+        $event = $app->repo('Event')->find($data['eventId']);
+        
+        if (!$event) {
+            $this->errorJson('Evento não encontrado', 404);
+            return;
+        }
+        
+        $favorite = $app->repo('EventFavorite')->findOneBy([
+            'agent' => $user->profile,
+            'event' => $event
+        ]);
+        
+        if ($favorite) {
+            $favorite->delete(true);
+            $this->json([
+                'success' => true,
+                'count' => $event->getFavoritesCount()
+            ]);
+        } else {
+            $this->json(['success' => false, 'message' => 'Favorito não encontrado']);
+        }
+    }
+
+    /**
+     * Retorna a lista de eventos favoritos do usuário logado
+     * @return void
+     */
+    public function GET_favorites() {
+        $this->requireAuthentication();
+        
+        $app = App::i();
+        $user = $app->user;
+        
+        $limit = isset($this->getData['@limit']) ? intval($this->getData['@limit']) : 24;
+        $offset = isset($this->getData['@offset']) ? intval($this->getData['@offset']) : 0;
+        
+        $events = $user->profile->getFavoriteEvents($limit, $offset);
+        $total = $user->profile->getFavoriteEventsCount();
+        
+        $this->apiResponse([
+            'events' => $events,
+            'total' => $total,
+            'limit' => $limit,
+            'offset' => $offset
+        ]);
+    }
 }

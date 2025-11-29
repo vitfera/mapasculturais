@@ -547,6 +547,46 @@ class Event extends \MapasCulturais\Entity
         return $revisionData;
     }
 
+    /**
+     * Retorna o número de favoritos deste evento
+     * 
+     * @return int
+     */
+    public function getFavoritesCount() {
+        $app = App::i();
+        $conn = $app->em->getConnection();
+        
+        $result = $conn->fetchColumn("SELECT COUNT(*) FROM event_favorite WHERE event_id = :event_id", [
+            'event_id' => $this->id
+        ]);
+        
+        return (int) $result;
+    }
+
+    /**
+     * Verifica se o usuário favoritou este evento
+     * 
+     * @param \MapasCulturais\Entities\User|null $user
+     * @return bool
+     */
+    public function isFavoritedByUser($user = null) {
+        if (!$user) {
+            $user = App::i()->user;
+        }
+        
+        if ($user->is('guest')) {
+            return false;
+        }
+        
+        $app = App::i();
+        $favorite = $app->repo('EventFavorite')->findOneBy([
+            'agent' => $user->profile,
+            'event' => $this
+        ]);
+        
+        return $favorite !== null;
+    }
+
     //============================================================= //
     // The following lines ara used by MapasCulturais hook system.
     // Please do not change them.

@@ -6,6 +6,7 @@ $this->layout = 'entity';
 
 $this->import('
     agent-data-2
+    agent-favorite-events
     country-address-view
     complaint-suggestion
     entity-actions
@@ -106,6 +107,12 @@ $this->breadcrumb = [
                     </aside>
                 </mc-container>
             </div>
+        </mc-tab>
+
+        <mc-tab v-if="entity.userId == global.auth.user?.id" icon="heart" label="<?= i::_e('Eventos Favoritos') ?>" slug="favorite-events">
+            <mc-container>
+                <agent-favorite-events :agent="entity"></agent-favorite-events>
+            </mc-container>
         </mc-tab>
     </mc-tabs>
     <entity-actions :entity="entity"></entity-actions>

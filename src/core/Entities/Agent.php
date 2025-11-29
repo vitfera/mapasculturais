@@ -560,6 +560,46 @@ class Agent extends \MapasCulturais\Entity
         }
     }
 
+    /**
+     * Retorna a lista de eventos favoritos do agente
+     * 
+     * @param int|null $limit
+     * @param int|null $offset
+     * @return array
+     */
+    public function getFavoriteEvents($limit = null, $offset = null) {
+        $app = App::i();
+        $qb = $app->repo('EventFavorite')->createQueryBuilder('f')
+            ->where('f.agent = :agent')
+            ->setParameter('agent', $this)
+            ->orderBy('f.createTimestamp', 'DESC');
+        
+        if ($limit) {
+            $qb->setMaxResults($limit);
+        }
+        if ($offset) {
+            $qb->setFirstResult($offset);
+        }
+        
+        return $qb->getQuery()->getResult();
+    }
+
+    /**
+     * Retorna o número total de eventos favoritos
+     * 
+     * @return int
+     */
+    public function getFavoriteEventsCount() {
+        $app = App::i();
+        $conn = $app->em->getConnection();
+        
+        $result = $conn->fetchColumn("SELECT COUNT(*) FROM event_favorite WHERE agent_id = :agent_id", [
+            'agent_id' => $this->id
+        ]);
+        
+        return (int) $result;
+    }
+
 
     //============================================================= //
     // The following lines ara used by MapasCulturais hook system.

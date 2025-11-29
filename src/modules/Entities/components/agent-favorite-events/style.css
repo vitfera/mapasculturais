@@ -1,0 +1,40 @@
+.agent-favorite-events {
+    padding: 2rem 0;
+}
+
+.agent-favorite-events .loading,
+.agent-favorite-events .error,
+.agent-favorite-events .empty-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: var(--mc-gray-500);
+}
+
+.agent-favorite-events .error {
+    color: var(--mc-error-500);
+}
+
+.agent-favorite-events .favorites-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1.5rem;
+}
+
+.agent-favorite-events .favorite-item {
+    position: relative;
+}
+
+.agent-favorite-events .favorite-item .event-favorite-button {
+    position: absolute;
+    top: 0.5rem;
+    right: 0.5rem;
+    z-index: 10;
+    background-color: rgba(255, 255, 255, 0.9);
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+}
+
+@media (max-width: 768px) {
+    .agent-favorite-events .favorites-grid {
+        grid-template-columns: 1fr;
+    }
+}
