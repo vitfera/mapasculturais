@@ -5,6 +5,7 @@ namespace Test;
 use MapasCulturais\App;
 use MapasCulturais\Connection;
 use MapasCulturais\Entities\EvaluationMethodConfiguration;
+use MapasCulturais\Entities\EvaluationMethodConfigurationAgentRelation;
 use MapasCulturais\Entities\Opportunity;
 use Tests\Abstract\TestCase;
 use Tests\Builders\PhasePeriods\After;
@@ -341,8 +342,8 @@ class EvaluationsDistributionTest extends TestCase
                 ->addValuers($valuers_per_committe - 1, 'committee 1')
                 ->addValuers($valuers_per_committe - 1, 'committee 2')
                 ->addValuers($valuers_per_committe, 'committee 3')
-                ->addValuer('committee 1', $valuer->profile)
-                ->addValuer('committee 2', $valuer->profile)
+                ->addValuer('committee 1', 'fulano', $valuer->profile)->done()
+                ->addValuer('committee 2', 'ciclano', $valuer->profile)->done()
                 ->done()
             ->getInstance();
 
@@ -483,8 +484,8 @@ class EvaluationsDistributionTest extends TestCase
                 ->addValuers($valuers_per_committe - 1, 'committee 1')
                 ->addValuers($valuers_per_committe - 1, 'committee 2')
                 ->addValuers($valuers_per_committe, 'committee 3')
-                ->addValuer('committee 1', $valuer->profile)
-                ->addValuer('committee 2', $valuer->profile)
+                ->addValuer('committee 1', 'fulano', $valuer->profile)->done()
+                ->addValuer('committee 2', 'ciclano', $valuer->profile)->done()
                 ->done()
 
             ->refresh()
@@ -626,8 +627,8 @@ class EvaluationsDistributionTest extends TestCase
                 ->addValuers($valuers_per_committe - 1, 'committee 1')
                 ->addValuers($valuers_per_committe - 1, 'committee 2')
                 ->addValuers($valuers_per_committe, 'committee 3')
-                ->addValuer('committee 1', $valuer->profile)
-                ->addValuer('committee 2', $valuer->profile)
+                ->addValuer('committee 1', 'fulano', $valuer->profile)->done()
+                ->addValuer('committee 2', 'ciclano', $valuer->profile)->done()
                 ->done()
             ->getInstance();
 
@@ -766,8 +767,8 @@ class EvaluationsDistributionTest extends TestCase
                 ->addValuers($valuers_per_committe - 1, 'committee 1')
                 ->addValuers($valuers_per_committe - 1, 'committee 2')
                 ->addValuers($valuers_per_committe, 'committee 3')
-                ->addValuer('committee 1', $valuer->profile)
-                ->addValuer('committee 2', $valuer->profile)
+                ->addValuer('committee 1', 'fulano', $valuer->profile)->done()
+                ->addValuer('committee 2', 'ciclano', $valuer->profile)->done()
                 ->done()
             ->getInstance();
 
@@ -1035,5 +1036,84 @@ class EvaluationsDistributionTest extends TestCase
         $number_of_evaluations = $conn->fetchScalar("SELECT COUNT(*) FROM evaluations");
 
         $this->assertEquals(0, $number_of_evaluations, 'Garantindo que não tenha avaliações');
+    }
+
+    function testMaxRegistrationsPerValuerLimit()
+    {
+        $admin = $this->userDirector->createUser('admin');
+        $this->login($admin);
+
+        $number_of_registrations = 20;
+        $fulano_max_registrations = 3;
+        $beltrano_max_registrations = 5;
+
+        $opportunity = $this->opportunityBuilder
+            ->reset(owner: $admin->profile, owner_entity: $admin->profile)
+            ->fillRequiredProperties()
+            ->firstPhase()
+                ->setRegistrationPeriod(new Open)
+                ->done()
+            ->save()
+            ->createSentRegistrations($number_of_registrations)
+            ->addEvaluationPhase(EvaluationMethods::simple)
+                ->setEvaluationPeriod(new ConcurrentEndingAfter)
+                ->setCommitteeValuersPerRegistration('committee 1', 1)
+                ->save()
+                ->addValuer('committee 1', name: 'fulano')
+                    ->maxRegistrations($fulano_max_registrations)
+                    ->done()
+                ->addValuer('committee 1', name: 'ciclano')
+                    ->done()
+                ->addValuer('committee 1', name: 'beltrano')
+                    ->maxRegistrations($beltrano_max_registrations)
+                    ->done()
+                ->redistributeCommitteeRegistrations()
+                ->done()
+            ->getInstance();
+
+
+        /** @var EvaluationMethodConfigurationAgentRelation[] */
+        $valuers = $opportunity->evaluationMethodConfiguration->agentRelations;
+
+        $fulano = $valuers[0];
+        $ciclano = $valuers[1];
+        $beltrano = $valuers[2];
+
+        /** @var Connection */
+        $conn = $this->app->em->getConnection();
+
+        // Verifica se o fulano recebeu o número correto de avaliações 
+        
+        $fulano_evaluations = $conn->fetchScalar(
+            "SELECT COUNT(*) FROM evaluations WHERE valuer_agent_id = :valuer_id",
+            ['valuer_id' => $fulano->agent->id]
+        );
+        $this->assertEquals($fulano_max_registrations, $fulano_evaluations, 'Garantindo que o primeiro avaliador com limite de inscrições na comissão recebeu o número correto de inscrições');
+
+        // Verifica se o beltrano recebeu no máximo 10 inscrições
+        $beltrano_evaluations = $conn->fetchScalar(  
+            "SELECT COUNT(*) FROM evaluations WHERE valuer_agent_id = :valuer_id",
+            ['valuer_id' => $beltrano->agent->id]
+        );
+        $this->assertEquals($beltrano_max_registrations, $beltrano_evaluations, 'Garantindo que o segundo avaliador com limite de inscrições na comissão recebeu o número correto de inscrições');
+
+        // Verifica se o ciclano recebeu as demais avaliações (Total de inscrições - avaliações do fulano - avaliações do beltrano)
+        $ciclano_evaluations = $conn->fetchScalar(  
+            "SELECT COUNT(*) FROM evaluations WHERE valuer_agent_id = :valuer_id",
+            ['valuer_id' => $ciclano->agent->id]
+        );
+
+        $this->assertEquals(
+            expected: $number_of_registrations - $fulano_evaluations - $beltrano_evaluations, 
+            actual: $ciclano_evaluations, 
+            message: 'Garantindo que o avaliador SEM limite de inscrições na comissão recebeu as demais inscrições'
+        );
+
+        // Verifica se o total de avaliações é 20 (todas as inscrições foram distribuídas)
+        $total_evaluations = $conn->fetchScalar("SELECT COUNT(*) FROM evaluations");
+        $this->assertEquals($number_of_registrations, $total_evaluations, 'Garantindo que todas as inscrições foram distribuídas');
+        
+        $this->assertEquals($fulano_max_registrations, $fulano->maxRegistrations, 'Garantindo que o getter retorna o valor correto para o primeiro avaliador com limite');
+        $this->assertEquals($beltrano_max_registrations, $beltrano->maxRegistrations, 'Garantindo que o getter retorna o valor correto para o segundo avaliador com limite');
     }
 }
