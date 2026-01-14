@@ -21,3 +21,214 @@
 .field-required {
     color: red;
 }
+
+/* Image Vote Field Styles */
+.image-vote-grid {
+    display: grid;
+    gap: 15px;
+    margin: 15px 0;
+}
+
+.image-vote-grid.image-size-small {
+    grid-template-columns: repeat(auto-fill, minmax(150px, 1fr));
+}
+
+.image-vote-grid.image-size-medium {
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+}
+
+.image-vote-grid.image-size-large {
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+}
+
+.image-vote-option {
+    border: 2px solid #ddd;
+    border-radius: 8px;
+    padding: 10px;
+    cursor: pointer;
+    transition: all 0.3s;
+    text-align: center;
+    background: white;
+}
+
+.image-vote-option:hover {
+    border-color: #aaa;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.image-vote-option.selected {
+    border-color: #1890ff;
+    background-color: #e6f7ff;
+    box-shadow: 0 4px 12px rgba(24, 144, 255, 0.3);
+}
+
+.image-vote-option__image {
+    margin-bottom: 10px;
+    overflow: hidden;
+    border-radius: 4px;
+}
+
+.image-vote-option__image img {
+    width: 100%;
+    height: auto;
+    display: block;
+}
+
+.image-size-small .image-vote-option__image img {
+    max-height: 120px;
+    object-fit: cover;
+}
+
+.image-size-medium .image-vote-option__image img {
+    max-height: 200px;
+    object-fit: cover;
+}
+
+.image-size-large .image-vote-option__image img {
+    max-height: 300px;
+    object-fit: cover;
+}
+
+.image-vote-option__title {
+    font-weight: bold;
+    margin: 10px 0;
+    font-size: 16px;
+}
+
+.image-vote-option__description {
+    font-size: 0.9em;
+    color: #666;
+    margin: 5px 0 10px;
+}
+
+.image-vote-option__selector {
+    margin-top: 10px;
+}
+
+/* List Mode */
+.image-vote-list {
+    margin: 15px 0;
+}
+
+.image-vote-list-item {
+    display: flex;
+    align-items: center;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    padding: 10px;
+    margin: 10px 0;
+    cursor: pointer;
+    transition: all 0.3s;
+    background: white;
+}
+
+.image-vote-list-item:hover {
+    border-color: #aaa;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.image-vote-list-item.selected {
+    border-color: #1890ff;
+    background-color: #e6f7ff;
+}
+
+.image-vote-list-item__selector {
+    margin-right: 15px;
+}
+
+.image-vote-list-item__image {
+    margin-right: 15px;
+    flex-shrink: 0;
+}
+
+.image-vote-list-item__image img {
+    width: 80px;
+    height: 80px;
+    object-fit: cover;
+    border-radius: 4px;
+    display: block;
+}
+
+.image-vote-list-item__content {
+    flex: 1;
+}
+
+.image-vote-list-item__title {
+    font-weight: bold;
+    font-size: 16px;
+}
+
+.image-vote-list-item__description {
+    font-size: 0.9em;
+    color: #666;
+    margin-top: 5px;
+}
+
+/* Image Only Mode */
+.image-vote-image-only {
+    display: grid;
+    gap: 15px;
+    margin: 15px 0;
+}
+
+.image-vote-image-only.image-size-small {
+    grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+}
+
+.image-vote-image-only.image-size-medium {
+    grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+}
+
+.image-vote-image-only.image-size-large {
+    grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+}
+
+.image-vote-image-item {
+    position: relative;
+    cursor: pointer;
+    border: 3px solid transparent;
+    border-radius: 8px;
+    overflow: hidden;
+    transition: all 0.3s;
+}
+
+.image-vote-image-item:hover {
+    transform: scale(1.05);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.2);
+}
+
+.image-vote-image-item.selected {
+    border-color: #1890ff;
+    box-shadow: 0 6px 16px rgba(24, 144, 255, 0.4);
+}
+
+.image-vote-image-item__wrapper {
+    position: relative;
+    width: 100%;
+    padding-bottom: 100%; /* Aspect ratio 1:1 */
+}
+
+.image-vote-image-item__wrapper img {
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+
+.image-vote-image-item__check {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background: #1890ff;
+    color: white;
+    border-radius: 50%;
+    width: 35px;
+    height: 35px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 20px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.3);
+}

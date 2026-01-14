@@ -680,6 +680,30 @@ class Module extends \MapasCulturais\Module
                 }
             ],
             [
+                'slug' => 'image-vote',
+                'name' => \MapasCulturais\i::__('Votação com imagens'),
+                'viewTemplate' => 'registration-field-types/image-vote',
+                'configTemplate' => 'registration-field-types/image-vote-config',
+                'serialize' => function($value) {
+                    if(is_array($value)){
+                        return json_encode($value);
+                    }
+                    return $value;
+                },
+                'unserialize' => function($value) {
+                    if(!$value) {
+                        return [];
+                    }
+                    
+                    $decoded = json_decode($value, true);
+                    if(json_last_error() === JSON_ERROR_NONE && is_array($decoded)) {
+                        return $decoded;
+                    }
+                    
+                    return [];
+                }
+            ],
+            [
                 'slug' => 'links',
                 'name' => \MapasCulturais\i::__('Campo de listagem de links'),
                 'viewTemplate' => 'registration-field-types/links',
