@@ -76,35 +76,37 @@
                         </div>
                         
                         <div ng-if="!option.imageUrl" style="margin-top: 10px;">
-                            <a class="btn btn-default edit hltip js-open-editbox" 
+                            <a class="btn btn-default edit hltip" 
                                hltitle="<?php i::esc_attr_e('Adicionar imagem'); ?>" 
-                               data-target="#editbox-image-vote-{{field.id}}-{{$index}}" 
                                href="#"
                                ng-click="openImageVoteUpload(field, $index, $event)">
                                 <span class="icon icon-image"></span> <?php i::_e('Adicionar imagem') ?>
                             </a>
                             
-                            <div id="editbox-image-vote-{{field.id}}-{{$index}}" 
-                                 class="js-editbox mc-right" 
-                                 title="<?php i::esc_attr_e('Adicionar imagem'); ?>">
+                            <edit-box id="editbox-image-vote-option-{{$index}}" 
+                                     position="right" 
+                                     title="<?php i::esc_attr_e('Adicionar imagem'); ?>"
+                                     cancel-label="<?php i::esc_attr_e('Cancelar'); ?>"
+                                     submit-label="<?php i::esc_attr_e('Enviar'); ?>"
+                                     on-submit="sendImageVoteFile"
+                                     close-on-cancel="true"
+                                     spinner-condition="data.uploadSpinner">
                                 <form class="js-ajax-upload" 
-                                      id="upload-image-vote-{{field.id}}-{{$index}}"
                                       method="post"
                                       action="<?php echo $app->createUrl('registrationfieldconfiguration', 'upload'); ?>"
-                                      data-action="custom"
-                                      data-group="image_vote_{{field.id}}_{{$index}}"
+                                      data-group="image_vote_field"
                                       enctype="multipart/form-data">
                                     <div class="alert danger hidden"></div>
                                     <p class="form-help"><?php i::_e("Tamanho máximo do arquivo: ");?><?php echo $app->view->maxUploadSizeFormatted; ?></p>
-                                    <input type="file" name="image_vote_{{field.id}}_{{$index}}" accept="image/*" />
-                                </form>
-                                <div class="js-ajax-upload-progress">
-                                    <div class="progress inactive">
-                                        <div class="bar"></div>
-                                        <div class="percent">0%</div>
+                                    <input type="file" name="image_vote_file" accept="image/*" />
+                                    <div class="js-ajax-upload-progress">
+                                        <div class="progress inactive">
+                                            <div class="bar"></div>
+                                            <div class="percent">0%</div>
+                                        </div>
                                     </div>
-                                </div>
-                            </div>
+                                </form>
+                            </edit-box>
                         </div>
                     </label>
 
@@ -193,58 +195,67 @@
                     }
                 };
                 
+                // Função para enviar arquivo
+                scope.sendImageVoteFile = function(attrs) {
+                    var editboxId = attrs.id;
+                    var $form = $('#' + editboxId + ' form');
+                    $form.submit();
+                };
+                
                 // Função para inicializar o uploader quando o editbox abrir
-                scope.openImageVoteUpload = function(field, index, event) {
+                scope.openImageVoteUpload = function(field, optionIndex, event) {
                     if (event) {
                         event.preventDefault();
                     }
                     
-                    var editboxId = 'editbox-image-vote-' + field.id + '-' + index;
-                    var formId = 'upload-image-vote-' + field.id + '-' + index;
+                    var editboxId = 'editbox-image-vote-option-' + optionIndex;
                     
-                    // Aguardar um pouco para garantir que o DOM está pronto
+                    // Abrir o editbox
+                    scope.editbox.open(editboxId, event);
+                    
+                    // Inicializar o uploader
                     setTimeout(function() {
-                        var $form = $('#' + formId);
+                        var $form = $('#' + editboxId + ' form');
                         
-                        if (!$form.data('initialized')) {
-                            // Inicializar o AjaxUploader
-                            MapasCulturais.AjaxUploader.init($form);
-                            $form.data('initialized', true);
-                            
-                            // Adicionar evento de sucesso customizado
-                            $form.on('ajaxForm.success', function(evt, response) {
-                                var group = $form.data('group');
-                                
-                                if (response[group] && response[group].url) {
-                                    scope.$apply(function() {
-                                        field.fieldOptions[index].imageUrl = response[group].url;
-                                    });
-                                    
-                                    // Fechar o editbox
-                                    scope.editbox.close(editboxId);
-                                    
-                                    MapasCulturais.Messages.success('<?php i::_e('Imagem enviada com sucesso!'); ?>');
-                                } else {
-                                    MapasCulturais.Messages.error('<?php i::_e('Erro ao processar resposta do upload.'); ?>');
-                                }
-                                
-                                // Reset do formulário
-                                $form.get(0).reset();
-                                MapasCulturais.AjaxUploader.resetProgressBar($form.parent());
-                            });
-                            
-                            // Evento de cancelamento
-                            $('#' + editboxId).on('cancel', function(){
-                                if($form.data('xhr')) {
-                                    $form.data('xhr').abort();
-                                }
-                                $form.get(0).reset();
-                                MapasCulturais.AjaxUploader.resetProgressBar($form.parent());
-                            });
+                        if ($form.data('initialized')) {
+                            return;
                         }
                         
-                        // Abrir o editbox
-                        scope.editbox.open(editboxId, event);
+                        MapasCulturais.AjaxUploader.init($form);
+                        $form.data('initialized', true);
+                        
+                        // Evento de cancelamento
+                        $('#' + editboxId).on('cancel', function(){
+                            if($form.data('xhr')) {
+                                $form.data('xhr').abort();
+                            }
+                            $form.get(0).reset();
+                            MapasCulturais.AjaxUploader.resetProgressBar($form.parent());
+                        });
+                        
+                        // Adicionar evento de sucesso customizado
+                        $form.on('ajaxForm.success', function(evt, response) {
+                            var group = $form.data('group');
+                            
+                            if (response[group] && response[group].url) {
+                                scope.$apply(function() {
+                                    field.fieldOptions[optionIndex].imageUrl = response[group].url;
+                                });
+                                
+                                // Fechar o editbox
+                                setTimeout(function(){
+                                    scope.editbox.close(editboxId, event);
+                                }, 700);
+                                
+                                MapasCulturais.Messages.success('<?php i::_e('Imagem enviada com sucesso!'); ?>');
+                            } else {
+                                MapasCulturais.Messages.error('<?php i::_e('Erro ao processar resposta do upload.'); ?>');
+                            }
+                            
+                            // Reset do formulário
+                            $form.get(0).reset();
+                            MapasCulturais.AjaxUploader.resetProgressBar($form.parent());
+                        });
                     }, 100);
                 };
             }
