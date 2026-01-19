@@ -5,6 +5,10 @@ Todas as mudanças notáveis no projeto serão documentadas neste arquivo.
 O formato é baseado no [Keep a Changelog](https://keepachangelog.com/pt-BR/1.0.0/)
 e este projeto adere ao [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [UNRELEASED]
+### Correções
+- Corrige exibição de anexos no PDF de inscrição, respeitando a ordem dos campos (displayOrder) e exibindo marcadores de campos obrigatórios
+
 ## [7.7.0] - 2025-12-19
 ### Novas Funcionalidades
 - Exportador / Importador de oportunidades
@@ -58,6 +62,23 @@ e este projeto adere ao [Semantic Versioning](https://semver.org/spec/v2.0.0.htm
 1. <small>Melhoria desenvolvida pelo Ministério das Cidades, através da Secretaria Nacional de Periferias, para o Prêmio Periferia Viva</small>
 <a name="770-funarte"></a>
 2. <small>Melhoria desenvolvida pela Funarte (Fundação Nacional de Artes) para a Rede das Artes</small>
+
+## [7.6.33] - 2026-01-16
+### Correções
+- Corrige bug visual na remoção de administradores de entidades, onde ao excluir um administrador era removido visualmente outro da lista
+
+## [7.6.32] - 2026-01-15
+### Correções 
+- Ajusta para que seja possivel solicitar recurso em todos os status de inscrição na fase de recurso
+
+## [7.6.31] - 2026-01-09
+### Correções
+- Ajusta o redirecionamento para usuários com perfil incompleto ou com erro, aplicando o magicGetter na validação dos erros do agente
+- Corrige a busca de dados no método getDataFromApi() do componente mc-entity, que falhava quando havia o parâmetro @keywords
+
+## [7.6.30] - 2026-01-06
+### Melhorias
+- Implementa forma de exibir todas as taxonomias obrigatórias no modal de criação de agente
 
 ## [7.6.29] - 2026-01-05
 ### Correções
