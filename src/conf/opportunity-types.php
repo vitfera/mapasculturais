@@ -293,6 +293,21 @@ return array(
             'label' => \MapasCulturais\i::__('É modelo público?'),
         ),
 
+        'modelGenerationStatus' => array(
+            'type' => 'text',
+            'label' => \MapasCulturais\i::__('Estado da geração baseada em modelo'),
+        ),
+
+        'modelGenerationSourceId' => array(
+            'type' => 'integer',
+            'label' => \MapasCulturais\i::__('ID do modelo utilizado na geração'),
+        ),
+
+        'modelGenerationError' => array(
+            'type' => 'text',
+            'label' => \MapasCulturais\i::__('Erro da geração baseada em modelo'),
+        ),
+
     ),
     'items' => $items,
 

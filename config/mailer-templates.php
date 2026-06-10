@@ -75,6 +75,14 @@ return [
             'title' => i::__("Erro na importação de formulário"),
             'template' => 'import_fields_error.html'
         ],
+        'generate_opportunity_from_model_success' => [
+            'title' => i::__("Oportunidade criada a partir do modelo"),
+            'template' => 'generate_opportunity_from_model_success.html'
+        ],
+        'generate_opportunity_from_model_error' => [
+            'title' => i::__("Erro ao criar oportunidade a partir do modelo"),
+            'template' => 'generate_opportunity_from_model_error.html'
+        ],
         'send_registration' => [
             'title' => i::__("Inscrição enviada"),
             'template' => 'send_registration.html'

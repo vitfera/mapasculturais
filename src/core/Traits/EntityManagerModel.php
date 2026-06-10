@@ -5,6 +5,7 @@ use MapasCulturais\App;
 use MapasCulturais\Entity;
 use MapasCulturais\Entities\Opportunity;
 use MapasCulturais\Entities\RegistrationStep;
+use Opportunities\Jobs\GenerateOpportunityFromModel;
 
 /**
  * Trait para gerenciamento de modelos de oportunidades
@@ -86,8 +87,99 @@ trait EntityManagerModel {
         $this->requireAuthentication();
         $this->entityOpportunity = $this->requestedEntity;
 
+        $ownerEntity = $this->getOpportunityModelOwnerEntity();
+        $ownerEntity->checkPermission('@control');
+
+        $pendingOpportunity = $this->findPendingOpportunityGeneration($ownerEntity);
+        if ($pendingOpportunity) {
+            $this->json([
+                'id' => $pendingOpportunity->id,
+                'modelGenerationStatus' => $pendingOpportunity->getMetadata('modelGenerationStatus'),
+            ], 202);
+        }
+
         $app->disableAccessControl();
-        $this->entityOpportunityModel = $this->generateOpportunity();
+        try {
+            $this->entityOpportunityModel = $this->generateOpportunity();
+            $this->entityOpportunityModel->setMetadata('modelGenerationStatus', 'pending');
+            $this->entityOpportunityModel->setMetadata('modelGenerationSourceId', $this->entityOpportunity->id);
+            $this->entityOpportunityModel->setMetadata('modelGenerationError', null);
+            $this->entityOpportunityModel->save(true);
+
+            $app->enqueueJob(GenerateOpportunityFromModel::SLUG, [
+                'sourceOpportunity' => $this->entityOpportunity,
+                'targetOpportunity' => $this->entityOpportunityModel,
+                'authenticatedUser' => $app->user,
+                'objectType' => $this->postData['objectType'] ?? null,
+                'ownerEntity' => $this->postData['ownerEntity'] ?? null,
+            ]);
+        } finally {
+            $app->enableAccessControl();
+        }
+
+        $this->json([
+            'id' => $this->entityOpportunityModel->id,
+            'modelGenerationStatus' => 'pending',
+        ], 202);
+    }
+
+    private function getOpportunityModelOwnerEntity()
+    {
+        $app = App::i();
+        $objectType = $this->postData['objectType'] ?? null;
+        $ownerEntityId = $this->postData['ownerEntity'] ?? null;
+
+        if (!$objectType || !$ownerEntityId) {
+            $this->errorJson(['ownerEntity' => [\MapasCulturais\i::__('A entidade vinculada é obrigatória')]], 400);
+        }
+
+        $ownerEntity = $app->repo($objectType)->find($ownerEntityId);
+        if (!$ownerEntity) {
+            $this->errorJson(['ownerEntity' => [\MapasCulturais\i::__('A entidade vinculada não foi encontrada')]], 404);
+        }
+
+        return $ownerEntity;
+    }
+
+    private function findPendingOpportunityGeneration($ownerEntity): ?Opportunity
+    {
+        $app = App::i();
+        $name = $this->postData['name'] ?? '';
+        $candidates = $app->repo('Opportunity')->findBy([
+            'owner' => $app->user->profile,
+            'name' => $name,
+            'status' => Entity::STATUS_DRAFT,
+        ]);
+
+        foreach ($candidates as $candidate) {
+            if (!in_array($candidate->getMetadata('modelGenerationStatus'), ['pending', 'processing'], true)) {
+                continue;
+            }
+
+            if ((int) $candidate->getMetadata('modelGenerationSourceId') !== (int) $this->entityOpportunity->id) {
+                continue;
+            }
+
+            if (
+                $candidate->ownerEntity
+                && $candidate->ownerEntity->getClassName() === $ownerEntity->getClassName()
+                && (int) $candidate->ownerEntity->id === (int) $ownerEntity->id
+            ) {
+                return $candidate;
+            }
+        }
+
+        return null;
+    }
+
+    public function processOpportunityGenerationFromModel(
+        Opportunity $sourceOpportunity,
+        Opportunity $targetOpportunity,
+        array $data = []
+    ): Opportunity {
+        $this->entityOpportunity = $sourceOpportunity;
+        $this->entityOpportunityModel = $targetOpportunity;
+        $this->postData = $data;
 
         $this->generateEvaluationMethods();
         $this->generatePhases();
@@ -100,9 +192,7 @@ trait EntityManagerModel {
         $this->syncRegistrationTaxonomiesFromSourceOntoModel();
         $this->entityOpportunityModel->save(true);
 
-        $app->enableAccessControl();
-
-        $this->json($this->entityOpportunityModel); 
+        return $this->entityOpportunityModel;
     }
 
     /**
@@ -320,13 +410,10 @@ trait EntityManagerModel {
 
         if (isset($postData['objectType']) && isset($postData['ownerEntity'])) {
             $ownerEntity = $app->repo($postData['objectType'])->find($postData['ownerEntity']);
-            $app->em->beginTransaction();            
             $app->em->getConnection()->update('opportunity', [
                     'object_type' => $ownerEntity->getClassName(), 
                     'object_id' => $ownerEntity->id
                 ], ['id' => $id]);
-
-            $app->em->commit();
         }
     }
 

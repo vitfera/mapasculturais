@@ -338,6 +338,8 @@ class OpportunityPhasesTest extends TestCase
         $payload = json_decode($responseBody, true, flags: JSON_THROW_ON_ERROR);
         $this->assertArrayHasKey('id', $payload, 'Garantindo que a resposta JSON inclua o id da nova oportunidade');
 
+        $this->processJobs();
+
         /** @var Opportunity|null $fromModel */
         $fromModel = $app->repo('Opportunity')->find($payload['id']);
         $this->assertNotNull($fromModel, 'Garantindo que a nova oportunidade criada a partir do modelo exista');
@@ -458,6 +460,8 @@ class OpportunityPhasesTest extends TestCase
         }
 
         $payload = json_decode((string) $app->response->getBody(), true, flags: JSON_THROW_ON_ERROR);
+        $this->processJobs();
+
         $fromModel = $app->repo('Opportunity')->find($payload['id']);
         $this->assertNotNull($fromModel, 'Garantindo que a nova oportunidade criada a partir do modelo exista');
         $fromModel = $fromModel->refreshed();
@@ -471,6 +475,98 @@ class OpportunityPhasesTest extends TestCase
             $fromModel,
             'Garantindo que o novo edital criado a partir do modelo mantenha categorias, tipos de proponente e faixas'
         );
+    }
+
+    function testOpportunityGenerationFromModelRunsInBackground(): void
+    {
+        $admin = $this->userDirector->createUser('admin');
+        $this->login($admin);
+
+        $model = $this->opportunityBuilder
+            ->reset(owner: $admin->profile, owner_entity: $admin->profile)
+            ->fillRequiredProperties()
+            ->save()
+            ->firstPhase()
+                ->setRegistrationPeriod(new Open)
+                ->createStep('etapa principal')
+                ->createField('campo-modelo-job', 'text', title: 'Campo do modelo por job')
+                ->done()
+            ->save()
+            ->refresh()
+            ->getInstance();
+
+        $model->setMetadata('isModel', 1);
+        $model->save(true);
+
+        $app = $this->app;
+        $app->request = $this->requestFactory->mapasPOST('opportunity', 'generateopportunity', [$model->id], ['id' => $model->id]);
+        $app->response = new Response();
+
+        /** @var OpportunityController $controller */
+        $controller = $app->controller('opportunity');
+        $controller->setRequestData(['id' => $model->id]);
+        $controller->postData = [
+            'name' => 'Edital gerado por job ' . uniqid('', true),
+            'entityId' => $model->id,
+            'objectType' => 'agent',
+            'ownerEntity' => $admin->profile->id,
+        ];
+
+        try {
+            $controller->ALL_generateopportunity();
+            $this->fail('Garantindo que ALL_generateopportunity encerre com Halt após responder em JSON');
+        } catch (Halt) {
+        }
+
+        $this->assertSame(202, $app->response->getStatusCode(), 'Garantindo que a criação seja aceita para processamento em segundo plano');
+
+        $payload = json_decode((string) $app->response->getBody(), true, flags: JSON_THROW_ON_ERROR);
+        $this->assertArrayHasKey('id', $payload, 'Garantindo que a resposta contenha o id do rascunho criado');
+
+        $generated = $app->repo('Opportunity')->find($payload['id'])->refreshed();
+        $this->assertSame('pending', $generated->getMetadata('modelGenerationStatus'), 'Garantindo que o rascunho aguarde o job');
+        $this->assertCount(0, $generated->getRegistrationFieldConfigurations(), 'Garantindo que o formulário não seja copiado durante a requisição');
+        $this->assertNotNull(
+            $app->repo('Job')->findOneBy(['type' => 'GenerateOpportunityFromModel']),
+            'Garantindo que o job de geração tenha sido enfileirado'
+        );
+
+        $firstGeneratedId = $payload['id'];
+        $app->request = $this->requestFactory->mapasPOST('opportunity', 'generateopportunity', [$model->id], ['id' => $model->id]);
+        $app->response = new Response();
+        $controller = $app->controller('opportunity');
+        $controller->setRequestData(['id' => $model->id]);
+        $controller->postData = [
+            'name' => $generated->name,
+            'entityId' => $model->id,
+            'objectType' => 'agent',
+            'ownerEntity' => $admin->profile->id,
+        ];
+
+        try {
+            $controller->ALL_generateopportunity();
+            $this->fail('Garantindo que a solicitação repetida encerre com Halt após responder em JSON');
+        } catch (Halt) {
+        }
+
+        $repeatedPayload = json_decode((string) $app->response->getBody(), true, flags: JSON_THROW_ON_ERROR);
+        $this->assertSame($firstGeneratedId, $repeatedPayload['id'], 'Garantindo que solicitações pendentes equivalentes retornem o mesmo rascunho');
+        $this->assertCount(
+            1,
+            $app->repo('Job')->findBy(['type' => 'GenerateOpportunityFromModel']),
+            'Garantindo que a solicitação repetida não crie outro job'
+        );
+
+        $this->processJobs();
+
+        $generated = $app->repo('Opportunity')->find($firstGeneratedId)->refreshed();
+        $this->assertSame('ready', $generated->getMetadata('modelGenerationStatus'), 'Garantindo que o job finalize a geração');
+
+        $generatedFieldTitles = array_map(
+            fn($field) => $field->title,
+            $generated->getRegistrationFieldConfigurations()
+        );
+        $this->assertContains('Campo do modelo por job', $generatedFieldTitles, 'Garantindo que o job copie o formulário do modelo');
     }
 
     /**

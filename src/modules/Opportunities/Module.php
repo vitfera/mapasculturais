@@ -70,6 +70,7 @@ class Module extends \MapasCulturais\Module{
         $app->registerJobType(new Jobs\UpdateSummaryCaches(Jobs\UpdateSummaryCaches::SLUG));
         $app->registerJobType(new Jobs\RedistributeCommitteeRegistrations(Jobs\RedistributeCommitteeRegistrations::SLUG));
         $app->registerJobType(new Jobs\ImportFields(Jobs\ImportFields::SLUG));
+        $app->registerJobType(new Jobs\GenerateOpportunityFromModel(Jobs\GenerateOpportunityFromModel::SLUG));
 
         $app->hook('request.finish', function($data, $status) use ($app) {
             if ((int) $status !== 200) {
